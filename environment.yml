@@ -1,4 +1,4 @@
-name: smplpytorch
+name: smpltojoint
 
 dependencies:
   - opencv
