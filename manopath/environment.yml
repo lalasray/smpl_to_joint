@@ -1,4 +1,4 @@
-name: smpltojoint
+name: manopth
 
 dependencies:
   - opencv
@@ -6,7 +6,7 @@ dependencies:
   - matplotlib
   - numpy
   - pytorch
-  - pip
   - tqdm
+  - git
   - pip:
-    - git+https://github.com/lalasray/chumpy.git
+    - git+https://github.com/hassony2/chumpy.git
