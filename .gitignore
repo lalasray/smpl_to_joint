@@ -13,3 +13,4 @@ smplpytorch/native/models/*.pkl
 /.ipynb_checkpoints
 /pic
 data.npz
+smpl2bvh/data/smpl_data.pkl
