@@ -16,3 +16,4 @@ data.npz
 smpl2bvh/data/smpl_data.pkl
 smpl2bvh/data/smpl_data.pkl
 bvh_gen.ipynb
+*.blend1
