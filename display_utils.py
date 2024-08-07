@@ -36,9 +36,9 @@ def display_model(
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.set_xlim(-0.7, 0.7)
-    ax.set_ylim(-0.7, 0.7)
-    ax.set_zlim(-0.7, 0.7)
+    #ax.set_xlim(-0.7, 0.7)
+    #ax.set_ylim(-0.7, 0.7)
+    #ax.set_zlim(-0.7, 0.7)
     ax.view_init(azim=-90, elev=100)
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
     if savepath:
