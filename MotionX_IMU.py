@@ -18,20 +18,25 @@ npy_files = glob.glob(os.path.join(motion_file_path, '**', '*.npy'), recursive=T
 absolute_paths = [os.path.abspath(file) for file in npy_files]
 
 for path in absolute_paths:
-    motion_file_path = path
-    motion = np.load(motion_file_path)
-    motion = torch.tensor(motion).float()
+    try:
+        motion_file_path = path
+        motion = np.load(motion_file_path)
+        motion = torch.tensor(motion).float()
 
-    motion_parms = {
-        'root_orient': motion[:, :3],  
-        'pose_body': motion[:, 3:3+63],  
-        'pose_hand': motion[:, 66:66+90],  
-        'pose_jaw': motion[:, 66+90:66+93],  
-        'face_expr': motion[:, 159:159+50],  
-        'face_shape': motion[:, 209:209+100],  
-        'trans': motion[:, 309:309+3],  
-        'betas': motion[:, 312:],  
-    }
+        motion_parms = {
+            'root_orient': motion[:, :3],  
+            'pose_body': motion[:, 3:3+63],  
+            'pose_hand': motion[:, 66:66+90],  
+            'pose_jaw': motion[:, 66+90:66+93],  
+            'face_expr': motion[:, 159:159+50],  
+            'face_shape': motion[:, 209:209+100],  
+            'trans': motion[:, 309:309+3],  
+            'betas': motion[:, 312:],  
+        }
+
+    except Exception as e:
+        print(f"Failed to process file: {motion_file_path}. Error: {str(e)}")
+        continue  # Skip to the next file
 
     zeros = torch.zeros(motion_parms['pose_body'].size(0), 6)
     motion_parms['pose_body'] = torch.cat((motion_parms['pose_body'], zeros), dim=1)
@@ -53,8 +58,7 @@ for path in absolute_paths:
             shape_params = shape_params.cuda()
             translation = translation.cuda()
 
-        verts, Jtr = smpl_layer(pose_params, th_betas=shape_params)
-        
+        verts, Jtr = smpl_layer(pose_params, th_betas=shape_params)       
         verts += translation.view(1, 1, -1)
         Jtr += translation.view(1, 1, -1)
         '''
@@ -165,11 +169,11 @@ for path in absolute_paths:
 
     base_dir, base_filename = os.path.split(motion_file_path)
     base_name = os.path.splitext(base_filename)[0]
-    save_dir = os.path.join(base_dir, base_name + "_v2")
+    save_dir = os.path.join(base_dir, base_name)
     os.makedirs(save_dir, exist_ok=True)
     for body_part, selected_vertices in selected_samples.items():
         positions, orientations, linear_accel, angular_vel = calculate_linear_acceleration_and_angular_velocity(all_verts, selected_vertices)
-        file_path = os.path.join(save_dir, f'{body_part}.npz')
+        file_path = os.path.join(save_dir, f'{body_part}_v2.npz')
         np.savez(file_path,
                 positions=positions,
                 orientations=orientations,
