@@ -173,7 +173,7 @@ for path in absolute_paths:
     os.makedirs(save_dir, exist_ok=True)
     for body_part, selected_vertices in selected_samples.items():
         positions, orientations, linear_accel, angular_vel = calculate_linear_acceleration_and_angular_velocity(all_verts, selected_vertices)
-        file_path = os.path.join(save_dir, f'{body_part}_v2.npz')
+        file_path = os.path.join(save_dir, f'{body_part}_v5.npz')
         np.savez(file_path,
                 positions=positions,
                 orientations=orientations,
