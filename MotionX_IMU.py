@@ -13,7 +13,8 @@ smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/
 if cuda:
     smpl_layer = smpl_layer.cuda()
 
-motion_file_path = r'/media/lala/Elements/motionx/motion_data/smplx_322'
+#motion_file_path = r'/media/lala/Crucial X62/CrosSim/motionx_smplx'
+motion_file_path = r'/media/lala/Crucial X62/CrosSim/motionx_other'
 npy_files = glob.glob(os.path.join(motion_file_path, '**', '*.npy'), recursive=True)
 absolute_paths = [os.path.abspath(file) for file in npy_files]
 
@@ -173,7 +174,7 @@ for path in absolute_paths:
     os.makedirs(save_dir, exist_ok=True)
     for body_part, selected_vertices in selected_samples.items():
         positions, orientations, linear_accel, angular_vel = calculate_linear_acceleration_and_angular_velocity(all_verts, selected_vertices)
-        file_path = os.path.join(save_dir, f'{body_part}_v5.npz')
+        file_path = os.path.join(save_dir, f'{body_part}_1.npz')
         np.savez(file_path,
                 positions=positions,
                 orientations=orientations,
