@@ -13,8 +13,7 @@ smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/
 if cuda:
     smpl_layer = smpl_layer.cuda()
 
-#motion_file_path = r'/media/lala/Crucial X62/CrosSim/motionx_smplx'
-motion_file_path = r'/media/lala/Crucial X62/CrosSim/motionx_other'
+motion_file_path = r'/media/lala/Crucial X62/CrosSim/motionx_smplx/aist'
 npy_files = glob.glob(os.path.join(motion_file_path, '**', '*.npy'), recursive=True)
 absolute_paths = [os.path.abspath(file) for file in npy_files]
 
@@ -59,7 +58,9 @@ for path in absolute_paths:
             shape_params = shape_params.cuda()
             translation = translation.cuda()
 
-        verts, Jtr = smpl_layer(pose_params, th_betas=shape_params)       
+        verts, Jtr = smpl_layer(pose_params, th_betas=shape_params) 
+        # Scale the coordinates by 2 
+        verts = 2*verts    
         verts += translation.view(1, 1, -1)
         Jtr += translation.view(1, 1, -1)
         '''
@@ -77,6 +78,8 @@ for path in absolute_paths:
 
     all_verts = np.array(all_verts)
     all_jtr = np.array(all_jtr)
+    
+    
 
     lists = {
         'right_wrist': [5405, 5430, 5431, 5567, 5569, 5667, 5668, 5669, 5670, 5696, 5702, 5705, 5740],
