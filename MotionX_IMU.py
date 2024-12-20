@@ -13,7 +13,7 @@ smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/
 if cuda:
     smpl_layer = smpl_layer.cuda()
 
-motion_file_path = r'/media/lala/Crucial X62/CrosSim/motionx_smplx/aist'
+motion_file_path = r'/media/lala/Crucial X62/CrosSim/motionx_smplx'
 npy_files = glob.glob(os.path.join(motion_file_path, '**', '*.npy'), recursive=True)
 absolute_paths = [os.path.abspath(file) for file in npy_files]
 
