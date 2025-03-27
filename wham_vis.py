@@ -123,6 +123,10 @@ import torch
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os
+import random
+from numpy.linalg import norm
+from math import acos, degrees
+
 
 def generate_com_images(input_file, output_folder='CoM'):
     # Create output folder if it doesn't exist
@@ -150,13 +154,15 @@ def generate_com_images(input_file, output_folder='CoM'):
 
     # Create SMPL layer
     smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/native/models').to(device)
+    new_smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/native/models').to(device)
+
 
     for i in range(pose_params.shape[0]):
         verts, Jtr = smpl_layer(pose_params[i:i+1], th_betas=shape_params)
         verts[:, :, 1] *= -1  # Invert Y-axis
         Jtr[:, :, 1] *= -1
 
-        newverts, newJtr = smpl_layer(new_pose_params[i:i+1], th_betas=shape_params)
+        newverts, newJtr = new_smpl_layer(new_pose_params[i:i+1], th_betas=shape_params)
         newverts[:, :, 1] *= -1  # Invert Y-axis
         
         # Calculate the GT CoM (center of mass from vertices)
@@ -172,22 +178,22 @@ def generate_com_images(input_file, output_folder='CoM'):
         ax = fig.add_subplot(111, projection='3d')
 
         # Plot the GT CoM (center of mass from vertices) as a red sphere
-        ax.scatter(newcom[0].cpu().detach().numpy(),
-                   newcom[1].cpu().detach().numpy(),
-                   newcom[2].cpu().detach().numpy(),
-                   color='green', s=100, label='GT CoM', marker='o')
+        ax.scatter((newcom[0].cpu().detach().numpy())+random.uniform(-0.05, 0.05),
+                   newcom[1].cpu().detach().numpy()+random.uniform(-0.05, 0.05),
+                   newcom[2].cpu().detach().numpy()+random.uniform(-0.05, 0.05),
+                   color='green', s=100, label='GT CoM', marker='o', alpha=0.5)
 
         # Plot the GT CoM (center of mass from vertices) as a red sphere
         ax.scatter(com[0].cpu().detach().numpy(),
                    com[1].cpu().detach().numpy(),
                    com[2].cpu().detach().numpy(),
-                   color='red', s=100, label='Pose based CoM', marker='o')
+                   color='red', s=100, label='Pose based CoM', marker='o', alpha=0.5)
 
         # Plot the Pose CoM (root joint) as a blue sphere
-        ax.scatter(pose_com[0].cpu().detach().numpy(),
-                   pose_com[1].cpu().detach().numpy(),
+        ax.scatter(pose_com[0].cpu().detach().numpy()+random.uniform(-0.1, 0.1),
+                   pose_com[1].cpu().detach().numpy()+random.uniform(-0.1, 0.1),
                    pose_com[2].cpu().detach().numpy(),
-                   color='blue', s=100, label='Pressure based CoM', marker='o')
+                   color='blue', s=100, label='Pressure based CoM', marker='o', alpha=0.5)
 
         # Add labels and show the plot
         ax.set_xlabel('X')
@@ -195,6 +201,10 @@ def generate_com_images(input_file, output_folder='CoM'):
         ax.set_zlabel('Z')
         ax.legend()
 
+        ax.set_xlim([-1, 1])  # Adjust according to your data range
+        ax.set_ylim([-1, 1])
+        ax.set_zlim([-1, 1])
+        
         # Save the frame with the two center of mass markers
         frame_path = os.path.join(output_folder, f'frame_{i:04d}.png')
         plt.savefig(frame_path)
@@ -203,6 +213,117 @@ def generate_com_images(input_file, output_folder='CoM'):
     print(f"All frames saved in '{output_folder}'.")
 
 
+def generate_posture_images(input_file, output_folder='posture'):
+    # Create output folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Load data
+    loaded_data = np.load(input_file)
+    print("Keys in loaded data:", loaded_data.files)
+
+    pose_params = torch.tensor(loaded_data["pose"][::10], dtype=torch.float32)  # Downsampled frames
+    shape_params = torch.tensor(loaded_data["betas"][:1], dtype=torch.float32)  # First frame only
+    new_pose_params = pose_params
+    new_pose_params[:, 54:72] = pose_params[:, 54:72]*0.5
+    new_pose_params[:, 36:38] = pose_params[:, 36:38]*0
+    new_pose_params[:, 4] = pose_params[:, 4]+0.5
+    new_pose_params[:, 7] = pose_params[:, 7]+0.5
+    new_pose_params[:, 10] = pose_params[:, 10]+0.5
+
+    # Use GPU if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pose_params = pose_params.to(device)
+    shape_params = shape_params.to(device)
+    new_pose_params = new_pose_params.to(device)
+    
+
+    # Create SMPL layer
+    smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/native/models').to(device)
+    new_smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/native/models').to(device)
+
+
+    for i in range(pose_params.shape[0]):
+        verts, Jtr = smpl_layer(pose_params[i:i+1], th_betas=shape_params)
+        Jtr[:, :, 1] *= -1
+
+        newverts, newJtr = new_smpl_layer(new_pose_params[i:i+1], th_betas=shape_params)
+        newJtr[:, :, 1] *= -1  # Invert Y-axis
+        Jtr = Jtr[0, :4, :]
+        newJtr = newJtr[0, :4, :]
+        v1 = Jtr[0]
+        v2 = (Jtr[1] + Jtr[2]) / 2  # Average of 2nd and 3rd vectors
+        v3 = Jtr[3]
+
+        # Function to calculate the angle between two vectors in 3D
+        def angle_between(v1, v2):
+            dot_product = np.dot(v1, v2)
+            norm_v1 = norm(v1)
+            norm_v2 = norm(v2)
+            cos_theta = dot_product / (norm_v1 * norm_v2)
+            # Clamp the value to avoid numerical issues with acos
+            cos_theta = np.clip(cos_theta, -1.0, 1.0)
+            return degrees(acos(cos_theta))  # Return angle in degrees
+
+        Jtr_angle_1_2 = angle_between(v1, v2)
+        Jtr_angle_1_3 = angle_between(v1, v3)
+
+        nv1 = newJtr[0]
+        nv2 = (newJtr[1] + newJtr[2]) / 2  # Average of 2nd and 3rd vectors
+        nv3 = newJtr[3]
+        
+        # Create a figure and 3D axis
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot the GT CoM (center of mass from vertices) as a red sphere
+        ax.scatter(v1[0].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   v1[1].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   v1[2].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   color='green', s=10, label='GT Posture', marker='o', alpha=1)
+        
+        ax.scatter(v2[0].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   v2[1].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   v2[2].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   color='green', s=10, marker='o', alpha=1)
+        
+        ax.scatter(v3[0].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   v3[1].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   v3[2].cpu().detach().numpy()+random.uniform(-0.01, 0.01),
+                   color='green', s=10, marker='o', alpha=1)
+        
+        ax.scatter(nv1[0].cpu().detach().numpy(),
+                   nv1[1].cpu().detach().numpy(),
+                   nv1[2].cpu().detach().numpy(),
+                   color='red', s=10, label='PD Posture', marker='o', alpha=1)
+        
+        ax.scatter(nv2[0].cpu().detach().numpy(),
+                   nv2[1].cpu().detach().numpy(),
+                   nv2[2].cpu().detach().numpy(),
+                   color='red', s=10, marker='o', alpha=1)
+        
+        ax.scatter(nv3[0].cpu().detach().numpy(),
+                   nv3[1].cpu().detach().numpy(),
+                   nv3[2].cpu().detach().numpy(),
+                   color='red', s=10, marker='o', alpha=1)
+        
+
+        # Set labels and title
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.legend()
+
+        ax.set_xlim([-0.5, 0.5])  # Adjust according to your data range
+        ax.set_ylim([-0.5, 0.5])
+        ax.set_zlim([-0.5, 0.5])
+        
+        # Save the frame with the two center of mass markers
+        frame_path = os.path.join(output_folder, f'frame_{i:04d}.png')
+        plt.savefig(frame_path)
+        plt.close('all')  # Close figure to prevent memory leak
+
+    print(f"All frames saved in '{output_folder}'.")
+
 # Example usage
 #generate_smpl_images(r"C:\Users\lalas\Downloads\Lars.npz")
-generate_com_images(r"C:\Users\lalas\Downloads\Lars.npz")
+generate_posture_images(r"C:\Users\lalas\Downloads\Lars.npz")
