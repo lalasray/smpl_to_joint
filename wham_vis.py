@@ -6,6 +6,29 @@ from smplpytorch.pytorch.smpl_layer import SMPL_Layer
 from display_utils import display_model
 import os
 
+def modify_poses(pose_params):
+    """Modify standing poses and arm movements to appear less static"""
+    modified_poses = pose_params.clone()
+    for i in range(modified_poses.shape[0]):
+        pose = modified_poses[i]
+        
+        # Add slight knee bend if standing (prevent perfect straightness)
+        if torch.abs(pose[1]) + torch.abs(pose[4]) < 0.1:
+            pose[1] += 0.15  # Left knee
+            pose[4] += 0.15  # Right knee
+        
+        # Reduce exaggerated arm movement
+        pose[16:22] *= 0.5  # Scale down arm joints motion
+    
+    return modified_poses
+
+def smooth_poses(pose_params, alpha=0.2):
+    """Smooth pose transitions using an exponential moving average filter"""
+    smoothed_poses = pose_params.clone()
+    for i in range(1, smoothed_poses.shape[0]):
+        smoothed_poses[i] = alpha * smoothed_poses[i] + (1 - alpha) * smoothed_poses[i - 1]
+    return smoothed_poses
+
 def generate_smpl_video(input_file, output_video='output.mp4', fps=30):
     # Load data
     loaded_data = np.load(input_file)
