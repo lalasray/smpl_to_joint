@@ -22,7 +22,7 @@ def modify_poses(pose_params):
     
     return modified_poses
 
-def smooth_poses(pose_params, alpha=0.2):
+def smooth_poses(pose_params, alpha=0.3):
     """Smooth pose transitions using an exponential moving average filter"""
     smoothed_poses = pose_params.clone()
     for i in range(1, smoothed_poses.shape[0]):
@@ -37,7 +37,10 @@ def generate_smpl_video(input_file, output_video='output.mp4', fps=30):
     pose_params = torch.tensor(loaded_data["pose"][::10], dtype=torch.float32)  # All frames downsampled
     #pose_params = torch.tensor(loaded_data["pose"], dtype=torch.float32)  # All frames
     shape_params = torch.tensor(loaded_data["betas"][:1], dtype=torch.float32)  # First frame only
+    pose_params = smooth_poses(pose_params) 
+    #pose_params[48:72] = 0
     
+    print(pose_params.shape) 
     # Use GPU if available
     cuda = torch.cuda.is_available()
     if cuda:
@@ -84,8 +87,12 @@ def generate_smpl_images(input_file, output_folder='output_frames'):
 
     pose_params = torch.tensor(loaded_data["pose"][::10], dtype=torch.float32)  # Downsampled frames
     shape_params = torch.tensor(loaded_data["betas"][:1], dtype=torch.float32)  # First frame only
-    pose_params =  modify_poses(pose_params)
-
+    pose_params[:, 54:72] = pose_params[:, 54:72]*0.5
+    pose_params[:, 36:38] = pose_params[:, 36:38]*0
+    pose_params[:, 4] = pose_params[:, 4]+0.5
+    pose_params[:, 7] = pose_params[:, 7]+0.5
+    pose_params[:, 10] = pose_params[:, 10]+0.5
+    
     # Use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     pose_params = pose_params.to(device)
@@ -111,5 +118,91 @@ def generate_smpl_images(input_file, output_folder='output_frames'):
 
     print(f"All frames saved in '{output_folder}'.")
 
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import os
+
+def generate_com_images(input_file, output_folder='CoM'):
+    # Create output folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Load data
+    loaded_data = np.load(input_file)
+    print("Keys in loaded data:", loaded_data.files)
+
+    pose_params = torch.tensor(loaded_data["pose"][::10], dtype=torch.float32)  # Downsampled frames
+    shape_params = torch.tensor(loaded_data["betas"][:1], dtype=torch.float32)  # First frame only
+    new_pose_params = pose_params
+    new_pose_params[:, 54:72] = pose_params[:, 54:72]*0.5
+    new_pose_params[:, 36:38] = pose_params[:, 36:38]*0
+    new_pose_params[:, 4] = pose_params[:, 4]+0.5
+    new_pose_params[:, 7] = pose_params[:, 7]+0.5
+    new_pose_params[:, 10] = pose_params[:, 10]+0.5
+
+    # Use GPU if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pose_params = pose_params.to(device)
+    shape_params = shape_params.to(device)
+    new_pose_params = new_pose_params.to(device)
+    
+
+    # Create SMPL layer
+    smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/native/models').to(device)
+
+    for i in range(pose_params.shape[0]):
+        verts, Jtr = smpl_layer(pose_params[i:i+1], th_betas=shape_params)
+        verts[:, :, 1] *= -1  # Invert Y-axis
+        Jtr[:, :, 1] *= -1
+
+        newverts, newJtr = smpl_layer(new_pose_params[i:i+1], th_betas=shape_params)
+        newverts[:, :, 1] *= -1  # Invert Y-axis
+        
+        # Calculate the GT CoM (center of mass from vertices)
+        com = verts.mean(dim=1).squeeze()  # Mean over the vertices (axis 1: x, y, z)
+
+        newcom = newverts.mean(dim=1).squeeze()
+
+        # The root joint is typically the first joint in the joint hierarchy (index 0)
+        pose_com = Jtr[0, 0, :]  # Pose CoM (root joint position)
+
+        # Create a figure and 3D axis
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot the GT CoM (center of mass from vertices) as a red sphere
+        ax.scatter(newcom[0].cpu().detach().numpy(),
+                   newcom[1].cpu().detach().numpy(),
+                   newcom[2].cpu().detach().numpy(),
+                   color='green', s=100, label='GT CoM', marker='o')
+
+        # Plot the GT CoM (center of mass from vertices) as a red sphere
+        ax.scatter(com[0].cpu().detach().numpy(),
+                   com[1].cpu().detach().numpy(),
+                   com[2].cpu().detach().numpy(),
+                   color='red', s=100, label='Pose based CoM', marker='o')
+
+        # Plot the Pose CoM (root joint) as a blue sphere
+        ax.scatter(pose_com[0].cpu().detach().numpy(),
+                   pose_com[1].cpu().detach().numpy(),
+                   pose_com[2].cpu().detach().numpy(),
+                   color='blue', s=100, label='Pressure based CoM', marker='o')
+
+        # Add labels and show the plot
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.legend()
+
+        # Save the frame with the two center of mass markers
+        frame_path = os.path.join(output_folder, f'frame_{i:04d}.png')
+        plt.savefig(frame_path)
+        plt.close('all')  # Close figure to prevent memory leak
+
+    print(f"All frames saved in '{output_folder}'.")
+
+
 # Example usage
-generate_smpl_images(r"C:\Users\lalas\Downloads\Lars.npz")
+#generate_smpl_images(r"C:\Users\lalas\Downloads\Lars.npz")
+generate_com_images(r"C:\Users\lalas\Downloads\Lars.npz")
