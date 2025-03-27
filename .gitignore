@@ -18,3 +18,4 @@ smpl2bvh/data/smpl_data.pkl
 bvh_gen.ipynb
 *.blend1
 *.mp4
+*.png

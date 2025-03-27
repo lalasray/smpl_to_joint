@@ -34,7 +34,8 @@ def generate_smpl_video(input_file, output_video='output.mp4', fps=30):
     loaded_data = np.load(input_file)
     print("Keys in loaded data:", loaded_data.files)
     
-    pose_params = torch.tensor(loaded_data["pose"], dtype=torch.float32)  # All frames
+    pose_params = torch.tensor(loaded_data["pose"][::10], dtype=torch.float32)  # All frames downsampled
+    #pose_params = torch.tensor(loaded_data["pose"], dtype=torch.float32)  # All frames
     shape_params = torch.tensor(loaded_data["betas"][:1], dtype=torch.float32)  # First frame only
     
     # Use GPU if available
@@ -67,10 +68,47 @@ def generate_smpl_video(input_file, output_video='output.mp4', fps=30):
         frame = cv2.imread(frame_path)
         frame = cv2.resize(frame, (frame_width, frame_height))
         video_writer.write(frame)
+        plt.close('all') 
         os.remove(frame_path)  # Clean up
     
     video_writer.release()
     print(f"Video saved as {output_video}")
 
+def generate_smpl_images(input_file, output_folder='output_frames'):
+    # Create output folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Load data
+    loaded_data = np.load(input_file)
+    print("Keys in loaded data:", loaded_data.files)
+
+    pose_params = torch.tensor(loaded_data["pose"][::10], dtype=torch.float32)  # Downsampled frames
+    shape_params = torch.tensor(loaded_data["betas"][:1], dtype=torch.float32)  # First frame only
+
+    # Use GPU if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pose_params = pose_params.to(device)
+    shape_params = shape_params.to(device)
+
+    # Create SMPL layer
+    smpl_layer = SMPL_Layer(center_idx=0, gender='neutral', model_root='smplpytorch/native/models').to(device)
+
+    for i in range(pose_params.shape[0]):
+        verts, Jtr = smpl_layer(pose_params[i:i+1], th_betas=shape_params)
+        verts[:, :, 1] *= -1  # Invert Y-axis
+        Jtr[:, :, 1] *= -1
+
+        frame_path = os.path.join(output_folder, f'frame_{i:04d}.png')  # Save with zero-padded numbering
+        display_model({'verts': verts.cpu().detach(), 'joints': Jtr.cpu().detach()},
+                      model_faces=smpl_layer.th_faces,
+                      with_joints=True,
+                      kintree_table=smpl_layer.kintree_table,
+                      savepath=frame_path,
+                      show=False)
+
+        plt.close('all')  # Close figure to prevent memory leak
+
+    print(f"All frames saved in '{output_folder}'.")
+
 # Example usage
-generate_smpl_video("/home/lala/Documents/repos/WHAM/output/Lars.npz")
+generate_smpl_images(r"C:\Users\lalas\Downloads\Lars.npz")
