@@ -14,11 +14,11 @@ def modify_poses(pose_params):
         
         # Add slight knee bend if standing (prevent perfect straightness)
         if torch.abs(pose[1]) + torch.abs(pose[4]) < 0.1:
-            pose[1] += 0.15  # Left knee
-            pose[4] += 0.15  # Right knee
+            pose[1] += 0.7  # Left knee
+            pose[4] += 0.7  # Right knee
         
         # Reduce exaggerated arm movement
-        pose[16:22] *= 0.5  # Scale down arm joints motion
+        pose[16:22] *= 0.2  # Scale down arm joints motion
     
     return modified_poses
 
@@ -84,6 +84,7 @@ def generate_smpl_images(input_file, output_folder='output_frames'):
 
     pose_params = torch.tensor(loaded_data["pose"][::10], dtype=torch.float32)  # Downsampled frames
     shape_params = torch.tensor(loaded_data["betas"][:1], dtype=torch.float32)  # First frame only
+    pose_params =  modify_poses(pose_params)
 
     # Use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
