@@ -325,5 +325,7 @@ def generate_posture_images(input_file, output_folder='posture'):
     print(f"All frames saved in '{output_folder}'.")
 
 # Example usage
-#generate_smpl_images(r"C:\Users\lalas\Downloads\Lars.npz")
-generate_posture_images(r"C:\Users\lalas\Downloads\Lars.npz")
+file = r"C:\Users\lalas\Downloads\Hyma.npz"
+generate_smpl_images(file)
+generate_posture_images(file)
+generate_com_images(file)
