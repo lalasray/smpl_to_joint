@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from smplpytorch.pytorch.smpl_layer import SMPL_Layer
 import matplotlib.pyplot as plt
-from scipy.spatial.transform import Rotation as R
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 from scipy.interpolate import interp1d
 
 # === CONFIG ===
@@ -100,6 +100,7 @@ save_dir = r"C:\Users\lalas\Desktop\2"
 os.makedirs(save_dir, exist_ok=True)
 
 interp_factor = 8
+window_size = 30
 
 for body_part, verts in lists.items():
     positions, orientations, linear_accel, angular_vel = calculate_linear_acceleration_and_angular_velocity(all_verts, verts)
@@ -110,7 +111,7 @@ for body_part, verts in lists.items():
     linear_accel = upsample(linear_accel, kind='cubic', factor=interp_factor)
     angular_vel = upsample(angular_vel, kind='linear', factor=interp_factor)
 
-    # === Save data ===
+    # === Save IMU data ===
     file_path = os.path.join(save_dir, f'{body_part}_1.npz')
     np.savez(file_path,
              positions=positions,
@@ -119,34 +120,56 @@ for body_part, verts in lists.items():
              angular_velocity=angular_vel)
     print(f"Saved IMU data: {file_path}")
 
-    # === Plot linear acceleration ===
-    t_acc = np.arange(linear_accel.shape[0])
-    plt.figure(figsize=(10, 4))
-    plt.plot(t_acc, linear_accel[:, 0], label='X')
-    plt.plot(t_acc, linear_accel[:, 1], label='Y')
-    plt.plot(t_acc, linear_accel[:, 2], label='Z')
-    plt.title(f'Linear Acceleration - {body_part}')
-    plt.xlabel('Frame')
-    plt.ylabel('Acceleration')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_dir, f'{body_part}_linear_acceleration.png'))
+    # === Create Linear Acceleration Sliding Window Video ===
+    num_frames = linear_accel.shape[0] - window_size
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.set_title(f'Linear Acceleration - {body_part}')
+    ax.set_xlim(0, window_size - 1)
+    ax.set_ylim(np.min(linear_accel) - 0.5, np.max(linear_accel) + 0.5)
+    ax.set_xlabel('Frame')
+    ax.set_ylabel('Acceleration')
+    line_x, = ax.plot([], [], label='X')
+    line_y, = ax.plot([], [], label='Y')
+    line_z, = ax.plot([], [], label='Z')
+    ax.legend()
+
+    def update_accel(frame):
+        x = np.arange(window_size)
+        line_x.set_data(x, linear_accel[frame:frame + window_size, 0])
+        line_y.set_data(x, linear_accel[frame:frame + window_size, 1])
+        line_z.set_data(x, linear_accel[frame:frame + window_size, 2])
+        return line_x, line_y, line_z
+
+    ani_acc = FuncAnimation(fig, update_accel, frames=num_frames, blit=True)
+    acc_video_path = os.path.join(save_dir, f'{body_part}_linear_acceleration.mp4')
+    ani_acc.save(acc_video_path, writer=FFMpegWriter(fps=30))
     plt.close()
 
-    # === Plot angular velocity ===
-    t_ang = np.arange(angular_vel.shape[0])
-    plt.figure(figsize=(10, 4))
-    plt.plot(t_ang, angular_vel[:, 0], label='X')
-    plt.plot(t_ang, angular_vel[:, 1], label='Y')
-    plt.plot(t_ang, angular_vel[:, 2], label='Z')
-    plt.title(f'Angular Velocity - {body_part}')
-    plt.xlabel('Frame')
-    plt.ylabel('Angular Velocity')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_dir, f'{body_part}_angular_velocity.png'))
+    # === Create Angular Velocity Sliding Window Video ===
+    num_frames = angular_vel.shape[0] - window_size
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.set_title(f'Angular Velocity - {body_part}')
+    ax.set_xlim(0, window_size - 1)
+    ax.set_ylim(np.min(angular_vel) - 0.5, np.max(angular_vel) + 0.5)
+    ax.set_xlabel('Frame')
+    ax.set_ylabel('Angular Velocity')
+    line_x, = ax.plot([], [], label='X')
+    line_y, = ax.plot([], [], label='Y')
+    line_z, = ax.plot([], [], label='Z')
+    ax.legend()
+
+    def update_ang(frame):
+        x = np.arange(window_size)
+        line_x.set_data(x, angular_vel[frame:frame + window_size, 0])
+        line_y.set_data(x, angular_vel[frame:frame + window_size, 1])
+        line_z.set_data(x, angular_vel[frame:frame + window_size, 2])
+        return line_x, line_y, line_z
+
+    ani_ang = FuncAnimation(fig, update_ang, frames=num_frames, blit=True)
+    ang_video_path = os.path.join(save_dir, f'{body_part}_angular_velocity.mp4')
+    ani_ang.save(ang_video_path, writer=FFMpegWriter(fps=30))
     plt.close()
 
-    print(f"Saved plots for {body_part}")
+    print(f"Saved videos for {body_part}")
 
 print("Processing complete.")
