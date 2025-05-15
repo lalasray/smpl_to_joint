@@ -3,8 +3,17 @@ import numpy as np
 import torch
 from smplpytorch.pytorch.smpl_layer import SMPL_Layer
 from scipy.interpolate import interp1d
-from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
+from scipy.spatial.transform import Rotation as R, Slerp
+
+def slerp_axis_angle(data, interp_factor):
+    rotations = R.from_rotvec(data.numpy())
+    key_times = np.linspace(0, 1, len(rotations))
+    interp_times = np.linspace(0, 1, len(rotations) * interp_factor)
+    slerp = Slerp(key_times, rotations)
+    interp_rots = slerp(interp_times)
+    return torch.tensor(interp_rots.as_rotvec()).float()
+
 
 # === CONFIG ===
 cuda = torch.cuda.is_available()
@@ -13,10 +22,8 @@ if cuda:
     smpl_layer = smpl_layer.cuda()
 
 # === FILE PATH ===
-motion_file_path = r'/media/lala/Crucial X62/CrosSim/Data/UniMocap/smplx_322/session1/sample_motion.npy'
+motion = np.load(r"C:\Users\lalas\Downloads\animation\comp_robot\zhangyuhong1\data\Motion-X++\v7\motion\motion_generation\smplx_322\animation\Ways_to_Jump_+_Sit_+_Fall_Reading_to_Children_clip1.npy")
 
-# === LOAD MOTION ===
-motion = np.load(motion_file_path)
 motion = torch.tensor(motion).float()
 motion_parms = {
     'root_orient': motion[:, :3],
@@ -35,13 +42,6 @@ orig_frames = motion_parms['root_orient'].shape[0]
 upsampled_frames = orig_frames * interp_factor
 x_old = np.arange(orig_frames)
 x_new = np.linspace(0, orig_frames - 1, upsampled_frames)
-
-def slerp_axis_angle(data, interp_factor):
-    rotations = R.from_rotvec(data.numpy())
-    key_times = np.linspace(0, 1, len(rotations))
-    interp_times = np.linspace(0, 1, len(rotations) * interp_factor)
-    interp_rots = R.slerp(key_times, rotations)(interp_times)
-    return torch.tensor(interp_rots.as_rotvec()).float()
 
 def interp_linear_or_spline(data, kind='cubic'):
     interp = interp1d(x_old, data.numpy(), axis=0, kind=kind)
@@ -118,9 +118,7 @@ def calculate_linear_acceleration_and_angular_velocity(all_verts, selected_verti
     return centroids, normals, linear_acceleration, angular_velocity
 
 # === SAVE RESULTS ===
-base_dir, base_filename = os.path.split(motion_file_path)
-base_name = os.path.splitext(base_filename)[0]
-save_dir = os.path.join(base_dir, base_name + '_interpolated')
+save_dir = r"C:\Users\lalas\Desktop\2"
 os.makedirs(save_dir, exist_ok=True)
 
 for body_part, verts in lists.items():
