@@ -8,5 +8,6 @@ dependencies:
   - pytorch
   - pip
   - tqdm
+  - joblib
   - pip:
     - git+https://github.com/lalasray/chumpy.git
