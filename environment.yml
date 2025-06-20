@@ -1,13 +1,21 @@
 name: smpltojoint
-
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+  - conda-forge
+  - defaults
 dependencies:
   - opencv
   - python=3.7
   - matplotlib
   - numpy
   - pytorch
+  - cudatoolkit=11.8
+  - torchvision
+  - torchaudio
   - pip
   - tqdm
-  - joblib
+  - joblib=1.3.2
   - pip:
     - git+https://github.com/lalasray/chumpy.git
