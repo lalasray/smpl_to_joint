@@ -11,9 +11,9 @@ def add_imu_noise(
     signal,
     fs=100,
     noise_type='full',
-    relative_noise_level=0.05,
-    bias_drift_ratio=0.01,
-    misalignment_deg=0.5,
+    relative_noise_level=0.05*2,
+    bias_drift_ratio=0.01*2,
+    misalignment_deg=0.5*2,
     cutoff=20
 ):
     """
@@ -77,3 +77,34 @@ def add_imu_noise(
         processed = processed @ misalign_matrix.T
 
     return processed
+
+
+def sharpen_peaks(signal, power_range=(1.1, 1.5), mix=0.9, seed=42):
+    """
+    Nonlinear peak sharpener for a vector signal:
+    - Raises local magnitude to a random power > 1
+    - Keeps direction unchanged
+    - Mixes with original for controllable effect
+
+    Args:
+        signal: (N, D)
+        power_range: (min_power, max_power) for random power
+        mix: blend ratio, 0=no change, 1=full sharpen
+    Returns:
+        sharpened_signal: (N, D)
+    """
+    rng = np.random.default_rng(seed)
+    mag = np.linalg.norm(signal, axis=1, keepdims=True)
+    # To avoid div by zero:
+    direction = np.divide(signal, mag + 1e-8)
+
+    # Random power factor per sample:
+    powers = rng.uniform(power_range[0], power_range[1], size=(signal.shape[0], 1))
+
+    mag_sharp = mag ** powers
+
+    sharpened = direction * mag_sharp
+
+    # Blend with original
+    out = (1 - mix) * signal + mix * sharpened
+    return out
