@@ -20,7 +20,7 @@ def build_patch_frame(v1, v2, v3):
     return R_frame
 
 
-def calculate_patch_IMU_signals(all_verts, selected_vertices, dt, g_world=np.array([0, 0, -9.81])):
+def calculate_patch_IMU_signals(all_verts, selected_vertices, dt, g_world=np.array([0, -9.81, 0])):
     """
     Compute realistic IMU signals for a patch on the mesh:
       - Position: patch centroid

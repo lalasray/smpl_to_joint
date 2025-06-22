@@ -2,7 +2,7 @@ import os
 import cv2
 
 # Specify the path to the folder containing the images
-folder_path = r"C:\Users\lalas\Documents\ChairPose\Hymayi\posture"
+folder_path = r"frames"
 
 # Get a list of image filenames
 image_files = [f for f in os.listdir(folder_path) if f.endswith(('.png', '.jpg', '.jpeg'))]
@@ -18,7 +18,7 @@ height, width, _ = first_image.shape
 # Set up the video writer to save the video
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for video
 output_video_path = os.path.join(folder_path, 'output_video.mp4')
-fps = 30  # Frames per second
+fps = 15  # Frames per second
 
 # Create the VideoWriter object
 out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
@@ -31,6 +31,6 @@ for image_file in image_files:
 
 # Release the VideoWriter and close any OpenCV windows
 out.release()
-cv2.destroyAllWindows()
+#cv2.destroyAllWindows()
 
 print(f"Video saved at {output_video_path}")
