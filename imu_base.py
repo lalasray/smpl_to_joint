@@ -12,7 +12,10 @@ def build_patch_frame(v1, v2, v3):
     X /= np.linalg.norm(X)
 
     Z = np.cross(v2 - v1, v3 - v1)
-    Z /= np.linalg.norm(Z)
+    Z_norm = np.linalg.norm(Z)
+    if Z_norm < 1e-8:
+        raise ValueError("Degenerate triangle: vertices are collinear.")
+    Z /= Z_norm
 
     Y = np.cross(Z, X)
 
@@ -50,23 +53,17 @@ def calculate_patch_IMU_signals(all_verts, selected_vertices, dt, g_world=np.arr
 
     frames_R = np.stack(frames_R)  # (N, 3, 3)
 
-    #Kinematic acceleration in world frame (motion only)
+    # Kinematic acceleration in world frame (motion only)
     velocities = np.gradient(centroids, dt, axis=0)
     linear_accel_world = np.gradient(velocities, dt, axis=0)
 
-    #Add gravity in world frame
+    # Add gravity in world frame
     a_total_world = linear_accel_world + g_world  # broadcasts automatically
 
-    #Rotate total (motion + gravity) to patch local frame
-    linear_accel_local = []
-    for i in range(num_frames):
-        R_patch = frames_R[i]
-        a_world = a_total_world[i]
-        a_local = R_patch.T @ a_world  # world -> local
-        linear_accel_local.append(a_local)
-    linear_accel_local = np.vstack(linear_accel_local)
+    # Rotate total (motion + gravity) to patch local frame using einsum for efficiency
+    linear_accel_local = np.einsum('nij,nj->ni', frames_R.transpose(0, 2, 1), a_total_world)
 
-    #Patch angular velocity: relative rotation matrix log
+    # Patch angular velocity: relative rotation matrix log
     angular_velocity = []
     for i in range(num_frames - 1):
         R1 = frames_R[i]
@@ -78,11 +75,11 @@ def calculate_patch_IMU_signals(all_verts, selected_vertices, dt, g_world=np.arr
         angular_velocity.append(omega)
     angular_velocity = np.vstack(angular_velocity)  # (N-1, 3)
 
-    #Patch orientation as quaternion (for saving)
+    # Patch orientation as quaternion (for saving)
     patch_quat = R.from_matrix(frames_R).as_quat()
     patch_quat = patch_quat[:-1]  # match angular velocity length
 
-    #Trim position and linear accel to match length
+    # Trim position and linear accel to match length
     centroids_out = centroids[:-1]
     linear_accel_local_out = linear_accel_local[:-1]
 
