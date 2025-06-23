@@ -67,13 +67,17 @@ def calculate_patch_IMU_signals(
 
     frames_R = np.stack(frames_R)
 
+    # Linear velocities and accelerations in world frame
     velocities = robust_derivative(centroids, dt, framerate, auto_jitter)
     linear_accel_world = robust_derivative(velocities, dt, framerate, auto_jitter)
 
     a_total_world = linear_accel_world + g_world
     linear_accel_local = np.einsum('nij,nj->ni', frames_R.transpose(0, 2, 1), a_total_world)
 
+    # Angular velocity: both in world and local
+    angular_velocity_world = []
     angular_velocity_local = []
+
     for i in range(num_frames - 1):
         R1 = frames_R[i]
         R2 = frames_R[i + 1]
@@ -81,6 +85,7 @@ def calculate_patch_IMU_signals(
         R_rel = R2 @ R1.T
         log_R = logm(R_rel).real
         omega_hat = log_R / dt
+
         omega_global = np.array([
             omega_hat[2, 1],
             omega_hat[0, 2],
@@ -88,13 +93,19 @@ def calculate_patch_IMU_signals(
         ])
 
         omega_local = R1.T @ omega_global
+
+        angular_velocity_world.append(omega_global)
         angular_velocity_local.append(omega_local)
 
+    angular_velocity_world = np.vstack(angular_velocity_world)
     angular_velocity_local = np.vstack(angular_velocity_local)
 
-    R0 = frames_R[0]
-    frames_R_relative = np.einsum('ij,njk->nik', R0.T, frames_R)
-    patch_quat_relative = R.from_matrix(frames_R_relative).as_quat()
-    patch_quat_relative = patch_quat_relative[:-1]
+    # Angular acceleration in world frame
+    angular_accel_world = robust_derivative(angular_velocity_world, dt, framerate, auto_jitter)
 
-    return centroids[:-1], patch_quat_relative, linear_accel_local[:-1], linear_accel_world[:-1], angular_velocity_local
+    # Quaternions (absolute)
+    patch_quat_absolute = R.from_matrix(frames_R).as_quat()
+    patch_quat_absolute = patch_quat_absolute[:-1]  # match other signals
+
+    return centroids[:-1], patch_quat_absolute, velocities[:-1], linear_accel_local[:-1], linear_accel_world[:-1], angular_velocity_world, angular_velocity_local, angular_accel_world
+
