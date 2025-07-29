@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.interpolate import interp1d
 from imusim.all import *
+import matplotlib.pyplot as plt
 
 class MyTrajectory:
     def __init__(self, positions, orientations, vel, acc, a_vel, a_acc, sf):
@@ -50,7 +51,7 @@ class MyTrajectory:
 import numpy as np
 
 # Load your saved data
-data = np.load("/home/lala/2/right_wrist.npz")
+data = np.load("/home/lala/Documents/Data/VQIMU/UTD_MHAD/smpl/a15_s6_t4_color/wham_output_right_thigh_sIMU.npz")
 
 sf = 15  # your sampling frequency
 positions = data['positions']
@@ -75,8 +76,17 @@ print("Running simulation...")
 sim.run(traj.endTime)
 print("Done!")
 
-import matplotlib.pyplot as plt
+'''
 plt.figure()
 plot(imu.accelerometer.rawMeasurements)
 plt.title("Synthetic Accelerometer for right_wrist")
 plt.show()
+
+plot(imu.gyroscope.rawMeasurements)
+plt.title("Synthetic Gyroscope for right_wrist")
+plt.show()
+'''
+
+acc_data = np.array([imu.accelerometer.rawMeasurements.values.squeeze().T])
+gyro_data = np.array([imu.gyroscope.rawMeasurements.values.squeeze().T])
+print(acc_data.shape, gyro_data.shape)

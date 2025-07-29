@@ -117,13 +117,33 @@ def process_and_save_patch_imu(pkl_file, imu_list, dt, model_root='smplpytorch/n
 
         print(f"Saved PATCH IMU data: {file_path}")
 
+def process_all_pkl_files_in_dir(root_dir, imu_list, fps=15):
+    """
+    Recursively process all .pkl files in a directory with given IMU config and FPS.
+    """
+    dt = 1 / fps
 
-UTD_lists = {
-    'right_wrist': {'verts': [5669, 5705, 5430]},
-    'right_thigh': {'verts': [847, 849, 957]}
-}
+    for dirpath, dirnames, filenames in os.walk(root_dir):
+        for filename in filenames:
+            if filename.endswith('.pkl'):
+                pkl_path = os.path.join(dirpath, filename)
+                try:
+                    process_and_save_patch_imu(pkl_file=pkl_path, imu_list=imu_list, dt=dt)
+                except Exception as e:
+                    print(f"[ERROR] Failed to process {pkl_path}: {e}")
 
-pkl_path = '/media/lala/A/datasets/VIDIMU/smpl/VIDIMU/prepared/smpl/S01_A01_T01/wham_output.pkl'
-FPS = 15
 
-process_and_save_patch_imu(pkl_file = pkl_path, imu_list = UTD_lists, dt = 1/FPS)
+
+def main():
+    root_dir = '/home/lala/Documents/Data/VQIMU/UTD_MHAD'
+    UTD_lists = {
+        'right_wrist': {'verts': [5669, 5705, 5430]},
+        'right_thigh': {'verts': [847, 849, 957]}
+    }
+    FPS = 15
+
+    process_all_pkl_files_in_dir(root_dir=root_dir, imu_list=UTD_lists, fps=FPS)
+
+
+if __name__ == "__main__":
+    main()
