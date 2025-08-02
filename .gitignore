@@ -19,3 +19,4 @@ bvh_gen.ipynb
 *.blend1
 *.mp4
 *.png
+/data
