@@ -11,7 +11,7 @@ def delete_non_imusim_files_and_empty_dirs(directory):
     # First: delete non-imusim files
     for dirpath, dirnames, filenames in os.walk(directory):
         for filename in filenames:
-            if not filename.endswith('.npz'):
+            if not filename.endswith('.pkl'):
                 file_path = os.path.join(dirpath, filename)
                 try:
                     os.remove(file_path)
@@ -29,4 +29,4 @@ def delete_non_imusim_files_and_empty_dirs(directory):
                 print(f"Failed to remove folder {dirpath}: {e}")
 
 # Run on your target directory
-delete_non_imusim_files_and_empty_dirs('/home/lala/Documents/Data/VQIMU/VIDIMU')
+delete_non_imusim_files_and_empty_dirs('/home/lala/Documents/Data/VQIMU/MMFIT')

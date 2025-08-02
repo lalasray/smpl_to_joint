@@ -135,14 +135,21 @@ def process_all_pkl_files_in_dir(root_dir, imu_list, fps=15):
 
 
 def main():
-    root_dir = '/home/lala/Documents/Data/VQIMU/UTD_MHAD'
+    root_dir = '/home/lala/Documents/Data/VQIMU/MMFIT'
     UTD_lists = {
         'right_wrist': {'verts': [5669, 5705, 5430]},
         'right_thigh': {'verts': [847, 849, 957]}
     }
+    MMFIT_lists = {
+        'right_wrist': {'verts': [5669, 5670, 5702]},
+        'left_wrist': {'verts': [1961, 1969, 2244]},
+        'right_thigh': {'verts': [1229,1228,1321]},
+        'left_thigh': {'verts': [4334,4333,4336]},
+        'ear': {'verts': [447, 448, 517]},
+    }
     FPS = 15
 
-    process_all_pkl_files_in_dir(root_dir=root_dir, imu_list=UTD_lists, fps=FPS)
+    process_all_pkl_files_in_dir(root_dir=root_dir, imu_list=MMFIT_lists, fps=FPS)
 
 
 if __name__ == "__main__":
