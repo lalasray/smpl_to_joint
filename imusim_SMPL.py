@@ -117,4 +117,4 @@ def process_directory(root_dir, sf):
 
 
 # ===== Example usage =====
-process_directory("/home/lala/Documents/Data/VQIMU/MMFIT", sf=15)
+process_directory("/home/lala/Documents/Data/VQIMU/CMHAD/", sf=15)
