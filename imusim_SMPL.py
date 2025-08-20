@@ -55,7 +55,8 @@ def simulate_imu(path, sf, plot_data=False):
     positions = data['positions']
     orientations = data['orientations']
     vel = data['linear_velocity']
-    acc = data['global_acceleration']
+    #acc = data['global_acceleration']
+    acc = data['accel_world']
     a_vel = data['angular_velocity_world']
     a_acc = data['angular_acceleration']
 
@@ -117,5 +118,5 @@ def process_directory(root_dir, sf):
 
 
 # ===== Example usage =====
-process_directory('/home/lala/Documents/Data/Motion-Xplusplus/motion/motion_generation/smplx322', sf=30)
+process_directory("/home/lala/Downloads/TotalCapture", sf=30)
 
